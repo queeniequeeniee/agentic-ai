@@ -12,7 +12,7 @@
 | # | 物料 | 备注 |
 |---|---|---|
 | 1 | 龙虾可正常对话 | 飞书 DM 发一句话能回复 |
-| 2 | 飞书开发者应用 | 有 App ID / App Secret，并已开通多维表格相关权限 |
+| 2 | 飞书开发者应用 | 有 App ID / App Secret，并已开通多维表格相关权限（读权限即可，写表走用户权限） |
 | 3 | 飞书多维表格 | 可以新建，也可以沿用已有 CRM Demo Base |
 | 4 | 课程仓库已 clone | `~/projects/agentic-ai` 存在且可 `git pull` |
 | 5 | 一份飞书会议原始 JSON | 仓库自带 demo，不用自己准备 |
@@ -150,10 +150,12 @@ FEISHU_OPPORTUNITY_TABLE_ID=tblxxxxxxxx
 
 dry-run 会生成写表计划，但不会真实写入飞书。
 
+> **⚠️ 飞书写表必须使用用户权限（user identity）。** 应用权限（app/bot identity）通常只有读权限，写操作会返回 403 Forbidden。后续第 7、8 步同理。
+
 ```text
 请用 CRM-Assistant 做一次飞书写表 dry-run。
 
-请使用第 4 步生成的 crm_packet.json 和第 3 步配置好的 .env.local。这一步只生成写表计划，不要真实写入飞书。输出结果请保存到 runtime/lab15_feishu/dry_run。
+请使用第 4 步生成的 crm_packet.json 和第 3 步配置好的 .env.local。飞书写表请使用用户权限（user identity），不要使用应用权限。这一步只生成写表计划，不要真实写入飞书。输出结果请保存到 runtime/lab15_feishu/dry_run。
 
 执行完后告诉我：
 1. feishu_sync_result.json 是否已生成
@@ -173,7 +175,7 @@ dry-run 会生成写表计划，但不会真实写入飞书。
 ```text
 请用 CRM-Assistant 把本次 CRM 结果真实写入飞书多维表格。
 
-请使用第 4 步生成的 crm_packet.json 和第 3 步配置好的 .env.local。这一次请真实写入飞书：Customers 表按客户 ID 新增或更新，OpportunitySnapshots 表追加一条商机推进快照。输出结果请保存到 runtime/lab15_feishu/write_once。
+请使用第 4 步生成的 crm_packet.json 和第 3 步配置好的 .env.local。飞书写表请使用用户权限（user identity），不要使用应用权限。这一次请真实写入飞书：Customers 表按客户 ID 新增或更新，OpportunitySnapshots 表追加一条商机推进快照。输出结果请保存到 runtime/lab15_feishu/write_once。
 
 执行完成后告诉我：
 1. 是否写入成功
@@ -187,16 +189,18 @@ dry-run 会生成写表计划，但不会真实写入飞书。
 
 ---
 
-## 8. 完整链路（可选）
+## 8. 一键全链路（可选）
 
-如果你想从飞书原始 JSON 直接跑到落表，可以让龙虾执行：
+前面第 4–7 步把接入、理解、判断、沉淀拆开逐步验证。这一步用一条命令把整条链路串起来，从飞书原始 JSON 一步到底，直接写入飞书两张表。
+
+> **⚠️ 避免重复记录**：Customers 表按客户 ID 做 upsert，重复跑只会更新同一行；但 OpportunitySnapshots 表是 append，每跑一次追加一条。如果前面第 7 步已经真实写入过，建议换一份样本（例如 `guojiadianwang_pv_grid_need_confirmation_rich.json`），避免同一客户出现重复快照。
 
 ```text
-请用 CRM-Assistant 跑完整 ingest 链路：从飞书原始 JSON 生成 CRM 结果，并写入飞书多维表格。
+请用 CRM-Assistant 一键跑完全链路：从飞书原始 JSON 生成 CRM 结果，并写入飞书多维表格。
 
 项目目录：~/projects/agentic-ai/CRM-Assistant
 
-请使用样本 assets/feishu_raw/pingan_longxiahezi_need_confirmation.json 和环境变量文件 .env.local，一次性完成：提取 context、生成 transcript、生成 CRM 结果、写入飞书两张表。输出目录请放到 runtime/lab15_ingest/pingan_need_confirmation。
+请使用样本 assets/feishu_raw/guojiadianwang_pv_grid_need_confirmation_rich.json 和环境变量文件 .env.local。飞书写表请使用用户权限（user identity），不要使用应用权限。一次性完成：提取 context、生成 transcript、生成 CRM 结果、写入飞书两张表。输出目录请放到 runtime/lab15_full/guojiadianwang。
 
 完成后告诉我：
 1. build_result_path 是否生成
@@ -206,13 +210,13 @@ dry-run 会生成写表计划，但不会真实写入飞书。
 5. OpportunitySnapshots 是否追加成功
 ```
 
-这一步等价于：
+这一步等价于把前面三条命令串联执行：
 
 ```text
-feishu_raw.json
-  -> build-context-from-feishu
-  -> process-transcript
-  -> sync-feishu-bitable
+飞书原始 JSON
+  → build-context-from-feishu    （接入：标准化输入）
+  → process-transcript           （理解 + 判断：结构化产出）
+  → sync-feishu-bitable          （沉淀：写入飞书表）
 ```
 
 ---
@@ -284,6 +288,7 @@ CRM_ASSISTANT_ROOT=~/projects/agentic-ai/CRM-Assistant
 | `Missing opportunity table id` | OpportunitySnapshots 表 ID 缺失 | 「请检查 .env.local 里是否有 FEISHU_OPPORTUNITY_TABLE_ID」 |
 | `tenant_access_token missing` | App ID / App Secret 错误或应用未发布 | 「请重新核对 .env.local 里的 FEISHU_APP_ID / FEISHU_APP_SECRET」 |
 | `Feishu API failed` | 权限、表 ID 或字段类型不匹配 | 「请返回完整报错，并重新执行 inspect-feishu-bitable」 |
+| `403 Forbidden` / 写表失败 | 使用了应用权限，应用身份无写权限 | 「飞书写表请使用用户权限（user identity），不要使用应用权限」 |
 | 字段缺失 | 建表时字段名和脚本字段不一致 | 「请按实验手册第 1 步补齐缺失字段，字段名保持完全一致」 |
 | 只生成 JSON 没写表 | 跑的是本地处理命令或带了 `--dry-run` | 「请确认执行的是 sync-feishu-bitable 且没有 --dry-run」 |
 | Customers 被覆盖了旧画像 | 当前输入有弱值或历史值保护未生效 | 「请返回 crm_packet.json 和 feishu_sync_result.json 里 customer_table_row 的内容」 |
