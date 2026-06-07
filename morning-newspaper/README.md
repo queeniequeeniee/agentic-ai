@@ -5,9 +5,16 @@
 把 GitHub、Hacker News、RSS、Tavily 搜索和邮箱等异构信号源，经过三道 LLM 编辑关口（标题粗筛 → 中文成稿 → Top10 精排），压缩成每日可交付的 AI 早报页面和飞书推送消息。
 
 ```
-sources.yaml 配置 → collect_raw → enrich_content → 标题粗筛 → 中文成稿 → Top10 精排 → dashboard.html → 飞书推送
-                                                    ↑ LLM 关口 1    ↑ LLM 关口 2    ↑ LLM 关口 3
-                                       邮箱采集 → mail_alerts ──────────────────────────→ 紧急事务侧栏
+sources.yaml → collect_raw → enrich_content
+                                   ↓
+                          ┌────────────────┐
+                          │  标题粗筛       │ ← LLM 关口 1
+                          │  中文成稿       │ ← LLM 关口 2
+                          │  Top10 精排     │ ← LLM 关口 3
+                          └────────┬───────┘
+                                   ↓
+              邮箱采集 ──→ dashboard.html ──→ 飞书推送
+                          (Top10 + 紧急事务)
 ```
 
 ![早报 Dashboard 效果](docs/screenshots/dashboard-demo.png)
