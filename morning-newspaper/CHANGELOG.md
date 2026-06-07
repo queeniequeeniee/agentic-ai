@@ -1,5 +1,32 @@
 # Changelog
 
+## 补充 Tavily 搜索配置文档
+
+- `.env.example` — 新增 `TAVILY_API_KEY` 条目及注册说明
+- `README.md` — 前置条件表新增 Tavily API Key，新增"Tavily 搜索配置"段（API Key、主题配置示例、不配置时的降级行为）
+
+## 移除百度搜索采集器
+
+移除 `cn_media_search` / `baidu_search` 相关的全部内容，本节课程不再使用该采集器。
+
+### 删除文件
+
+| 文件 | 说明 |
+|---|---|
+| `src/morning_newspaper/collectors/baidu_search.py` | 百度搜索子进程调用 |
+| `src/morning_newspaper/collectors/cn_media.py` | 中文媒体搜索采集器 |
+
+### 代码变更
+
+- `collectors/orchestrator.py` — 移除 `cn_media` 导入和通道型采集器调度逻辑
+- `scripts/collect_raw.py` — `--dry-run` 输出不再包含 `cn_media_search_enabled`
+- `config/sources.yaml` — 移除 `cn_media_search` 配置段
+
+### 文档变更
+
+- `README.md` — 核心模块表和目录树中移除 `cn_media.py`、`baidu_search.py`
+- `docs/source_strategy.md` — 来源总览表移除 `cn_media_search` 行，移除"外部脚本搜索"小节，调度步骤从五步缩为四步
+
 ## README 快速开始优化
 
 - 新增"前置条件"段，列出 Python 版本、OpenClaw、GitHub Token、IMAP 授权码的依赖关系和可选性

@@ -12,10 +12,9 @@
 | `hackernews_top` | Hacker News 热门故事 | 结构化 API | primary | `collectors/hackernews.py` |
 | `sec_press_releases` | SEC 新闻稿 | RSS/Atom | background | `collectors/rss.py` |
 | `fed_press_all` | 美联储新闻稿 | RSS/Atom | background | `collectors/rss.py` |
-| `cn_media_search` | 中文媒体搜索 | 外部脚本搜索 | primary | `collectors/cn_media.py` → `baidu_search.py` |
 | `openclaw_tavily` | Tavily 主题搜索 | 搜索计划回填 | primary | `collectors/tavily.py` |
 
-## 三种采集范式
+## 两种采集范式
 
 ### 1. 结构化 API
 
@@ -99,40 +98,7 @@
   max_items: 2
 ```
 
-### 3. 搜索型来源
-
-搜索型来源分两种，核心区别在于**谁执行搜索**。
-
-#### 3a. 外部脚本搜索（中文媒体）
-
-**代表来源**：机器之心、新智元、量子位
-
-**核心逻辑**：通过 `subprocess` 调用外部 `baidu-search` 脚本，按 `site:` 定向搜索指定媒体网站。搜索结果只作为"发现 URL"的线索，不作为正文证据。
-
-**中文媒体采集器**（`collectors/cn_media.py` → `collectors/baidu_search.py`）
-
-- 入口函数：`collect_cn_media(config)`
-- 对每条 query 调用 `run_baidu_search()`，后者通过 `subprocess.run()` 执行 `search.py`
-- 通过 `detect_cn_media_source()` 识别搜索结果属于哪家媒体（按 query 关键词或 URL 域名匹配）
-- 采集字段：标题、URL、摘要片段、搜索排名、query、媒体来源
-
-**配置示例**：
-
-```yaml
-cn_media_search:
-  enabled: true
-  source_type: cn_media_search
-  search_top_k: 10
-  news_count: 10
-  recency_filter: day
-  baidu_search_script_dir: /root/.openclaw/workspace/skills/baidu-search/scripts
-  queries:
-    - 机器之心 site:jiqizhixin.com
-    - 新智元 site:aiera.com
-    - 量子位 site:qbitai.com
-```
-
-#### 3b. 搜索计划回填（Tavily）
+### 3. 搜索计划回填（Tavily）
 
 **代表来源**：AI 前沿技术、AI Agent 与开源工具、AI 商业化与企业采用、AI 创业融资与产品发布
 
@@ -186,10 +152,9 @@ openclaw_tavily:
 `collect_all(config, root=...)` 是统一入口，按以下顺序执行：
 
 1. 遍历 `fixed_sources`（GitHub、HN、RSS），逐个调用对应采集器
-2. 遍历通道型采集器（`cn_media_search`），调用 `collect_cn_media()`
-3. 处理 Tavily：先写搜索计划，再读取已有结果文件
-4. 对所有候选做精确去重（`dedup_exact()`，按 URL 去重）
-5. 按 `lookback_days`（默认 3 天）过滤过旧候选
+2. 处理 Tavily：先写搜索计划，再读取已有结果文件
+3. 对所有候选做精确去重（`dedup_exact()`，按 URL 去重）
+4. 按 `lookback_days`（默认 3 天）过滤过旧候选
 
 返回值：`(items: List[RawItem], reports: List[Dict])`，其中 reports 记录每个来源的采集状态和数量。
 

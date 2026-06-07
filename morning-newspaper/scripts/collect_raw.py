@@ -45,7 +45,6 @@ def main() -> None:
                 }
                 for item in fixed
             ],
-            "cn_media_search_enabled": bool(config.get("cn_media_search", {}).get("enabled", False)),
             "openclaw_tavily_enabled": bool(config.get("openclaw_tavily", {}).get("enabled", False)),
             "paused_sources": config.get("paused_sources", []),
         }

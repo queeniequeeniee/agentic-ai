@@ -7,7 +7,6 @@ from typing import Any, Dict, List
 from morning_newspaper.common import compact_text
 from morning_newspaper.models import RawItem
 
-from .cn_media import collect_cn_media
 from .github import fetch_github_high_stars
 from .hackernews import fetch_hackernews_top
 from .items import dedup_exact
@@ -29,31 +28,6 @@ def collect_all(config: Dict[str, Any], *, root: Path) -> tuple[List[RawItem], L
             items.extend(fetched)
         except Exception as exc:
             reports.append(_report(source, "failed", 0, str(exc)))
-
-    channel_collectors = [
-        ("cn_media_search", "cn_media_search", collect_cn_media),
-    ]
-    for section_name, source_id, collector in channel_collectors:
-        section = config.get(section_name, {})
-        if not isinstance(section, dict) or not section.get("enabled", False):
-            continue
-        try:
-            fetched = _filter_recent_items(collector(section), lookback_days=lookback_days)
-            reports.append({
-                "source_id": source_id,
-                "source_type": section.get("source_type", source_id),
-                "status": "ok",
-                "item_count": len(fetched),
-            })
-            items.extend(fetched)
-        except Exception as exc:
-            reports.append({
-                "source_id": source_id,
-                "source_type": section.get("source_type", source_id),
-                "status": "failed",
-                "item_count": 0,
-                "error": str(exc),
-            })
 
     tavily_cfg = config.get("openclaw_tavily", {})
     if isinstance(tavily_cfg, dict) and tavily_cfg.get("enabled", False):

@@ -33,8 +33,9 @@ sources.yaml → collect_raw → enrich_content
 
 | 条件 | 说明 |
 |---|---|
-| Python 3.9+ | 虚拟环境管理和依赖安装 |
+| Python 3.10+ | 代码使用了 `X \| Y` 联合类型等 3.10 语法 |
 | OpenClaw 已部署 | 龙虾正常对话，用于三道 LLM 关口和 Tavily 搜索 Skill |
+| Tavily API Key（推荐） | 在 [tavily.com](https://tavily.com) 注册获取，用于动态搜索回填采集 |
 | GitHub Token（可选） | 不配置可跑，但 GitHub API 匿名速率较低 |
 | IMAP 邮箱授权码（可选） | 不配置自动跳过邮箱提醒，不影响主流程 |
 
@@ -87,7 +88,7 @@ python scripts/run_daily_pipeline.py
 | 模块 | 职责 |
 |---|---|
 | `config/sources.yaml` | 所有信号源配置：GitHub、HN、RSS、Tavily 主题、邮箱、运行时间窗口 |
-| `src/morning_newspaper/collectors/` | 各来源采集器：`github.py`、`hackernews.py`、`rss.py`、`tavily.py`、`cn_media.py` |
+| `src/morning_newspaper/collectors/` | 各来源采集器：`github.py`、`hackernews.py`、`rss.py`、`tavily.py` |
 | `src/morning_newspaper/content_fetch.py` | 正文二次抓取、主体抽取、网页噪音过滤 |
 | `src/morning_newspaper/mailbox.py` | IMAP/POP3 邮箱采集、事件队列、到期触发 |
 | `src/morning_newspaper/dashboard.py` | 看板 payload 组装与静态 HTML 渲染 |
@@ -134,6 +135,28 @@ python scripts/run_daily_pipeline.py
 | Top10 精排 | 已成稿候选 | 决定谁进前 10 和先后顺序 | 不重新写稿 |
 
 核心约束：每个关口只做一件事，产物可独立检查、独立重跑。
+
+## Tavily 搜索配置
+
+Tavily 是早报的动态搜索回填来源，通过 OpenClaw 的 `tavily-search` Skill 执行搜索。在 `.env` 中配置 API Key：
+
+```bash
+TAVILY_API_KEY=tvly-your_tavily_api_key
+```
+
+> API Key 在 [tavily.com](https://tavily.com) 注册后获取，免费额度足够日常早报使用。
+
+搜索主题在 `config/sources.yaml` 的 `openclaw_tavily.topics` 段配置，每个主题包含搜索词和域名白名单：
+
+```yaml
+topics:
+  - id: ai_frontier_technology
+    name: AI 前沿技术
+    query: latest AI model release multimodal reasoning inference benchmark
+    domains: [openai.com, anthropic.com, deepmind.google, ai.meta.com]
+```
+
+不配置 `TAVILY_API_KEY` 时，采集脚本仍可正常运行（GitHub、HN、RSS 不受影响），但 Tavily 搜索结果为空。
 
 ## 邮箱提醒配置
 
@@ -229,8 +252,6 @@ morning-newspaper/
 │       │   ├── hackernews.py                #   HN Firebase API
 │       │   ├── rss.py                       #   RSS/Atom 解析
 │       │   ├── tavily.py                    #   Tavily 搜索计划 + 结果读取
-│       │   ├── cn_media.py                  #   中文媒体搜索
-│       │   ├── baidu_search.py              #   百度搜索脚本调用
 │       │   └── items.py                     #   RawItem 构造与去重
 │       ├── common.py                        # JSON/YAML/.env/HTTP 通用函数
 │       ├── content_fetch.py                 # 正文抓取与主体抽取
